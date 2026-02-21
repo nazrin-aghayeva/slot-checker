@@ -1,11 +1,11 @@
 from playwright.sync_api import sync_playwright
-import os
-import json
+import os, json, time, requests
 
 TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-URL = "https://lift-api.vfsglobal.com/appointment/CheckIsSlotAvailable"
+API = "https://lift-api.vfsglobal.com/appointment/CheckIsSlotAvailable"
+SITE = "https://visa.vfsglobal.com/aze/en/cze/login"
 
 payload = {
     "countryCode":"aze",
@@ -18,7 +18,6 @@ payload = {
 }
 
 def send(msg):
-    import requests
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         json={"chat_id": CHAT_ID, "text": msg}
@@ -29,12 +28,18 @@ with sync_playwright() as p:
     context = browser.new_context()
     page = context.new_page()
 
-    page.goto("https://lift-api.vfsglobal.com")
+    # Open real site page so Cloudflare runs challenge
+    page.goto(SITE, timeout=60000)
 
-    response = page.request.post(URL, data=json.dumps(payload))
+    # wait for challenge JS to finish
+    time.sleep(8)
+
+    # Now request API using same session cookies
+    response = context.request.post(API, data=json.dumps(payload))
+
+    print("status:", response.status)
 
     if response.status != 200:
-        print("Blocked:", response.status)
         browser.close()
         exit()
 
