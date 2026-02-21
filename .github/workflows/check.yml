@@ -17,7 +17,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install requests
+      - run: pip install playwright requests
+      - run: playwright install chromium
       - name: Run checker
         run: python checker.py
         env:
